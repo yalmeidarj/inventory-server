@@ -1,0 +1,428 @@
+// prisma/seedData/items.ts
+// Basic data to seed Items (with images, gems).
+// Some items have QR/barcode fields filled; others don't (app is barcode-ready but not dependent).
+
+export interface ImageSeed {
+  url: string;
+  alt?: string;
+  isPrimary?: boolean;
+  sortOrder?: number;
+  isPublic?: boolean;
+}
+
+export interface GemSeed {
+  type: string;
+  carat?: number;
+  clarity?: string;
+  color?: string;
+  cut?: string;
+  sizeMm?: number;
+  shape?: string;
+  labCertificate?: string;
+  notes?: string;
+}
+
+export interface ItemSeed {
+  sku: string;
+  title: string;
+  category?: string | null;
+  status: "DRAFT" | "IN_STOCK" | "RESERVED" | "SOLD" | "ARCHIVED";
+  priceCents: number;
+  currency: string; // ISO 4217 (e.g., "BRL", "CAD", "USD")
+
+  qrSlug?: string | null;
+  barcodeType?: "CODE128" | "EAN13" | "QR" | null;
+  barcodeData?: string | null;
+
+  isPublic?: boolean;
+  publicAt?: string | null;
+  publicNotes?: string | null;
+  privateNotes?: string | null;
+
+  supplierName?: string | null;
+  supplierRef?: string | null;
+  costCents?: number | null;
+  acquiredAt?: string | null;
+
+  weightGrams?: number | null;
+  size?: string | null;
+
+  images?: ImageSeed[];
+  gems?: GemSeed[];
+  tagSlugs?: string[];
+}
+
+export const items: ItemSeed[] = [
+  {
+    sku: "R-001-AU-6",
+    title: "14k Yellow Gold Diamond Solitaire Ring (Size 6)",
+    category: "ring",
+    status: "IN_STOCK",
+    priceCents: 599000, // R$5,990.00
+    currency: "BRL",
+    qrSlug: "r-001-au-6",
+    barcodeType: "QR",
+    barcodeData: "R-001-AU-6",
+    isPublic: true,
+    publicNotes: "Classic solitaire setting",
+    supplierName: "Aurum Co",
+    costCents: 350000,
+    weightGrams: 3.2,
+    size: "6",
+    images: [
+      {
+        url: "https://example.com/images/R-001-AU-6-1.jpg",
+        alt: "Front",
+        isPrimary: true,
+      },
+      { url: "https://example.com/images/R-001-AU-6-2.jpg", alt: "Side" },
+    ],
+    gems: [
+      {
+        type: "diamond",
+        carat: 0.5,
+        clarity: "VS1",
+        color: "G",
+        cut: "Excellent",
+      },
+    ],
+    tagSlugs: [
+      "diamond",
+      "gold",
+      "yellow-gold",
+      "ring",
+      "engagement",
+      "minimal",
+    ],
+  },
+  {
+    sku: "R-002-PT-7",
+    title: "Platinum Sapphire Halo Engagement Ring (Size 7)",
+    category: "ring",
+    status: "RESERVED",
+    priceCents: 899000,
+    currency: "BRL",
+    barcodeType: "CODE128",
+    barcodeData: "R-002-PT-7",
+    isPublic: true,
+    supplierName: "BlueStone Ltd",
+    costCents: 560000,
+    weightGrams: 4.1,
+    size: "7",
+    images: [
+      {
+        url: "https://example.com/images/R-002-PT-7-1.jpg",
+        alt: "Top",
+        isPrimary: true,
+      },
+      { url: "https://example.com/images/R-002-PT-7-2.jpg", alt: "Profile" },
+    ],
+    gems: [
+      {
+        type: "sapphire",
+        carat: 1.2,
+        color: "Royal Blue",
+        cut: "Oval",
+        sizeMm: 7.0,
+        shape: "oval",
+      },
+      {
+        type: "diamond",
+        carat: 0.25,
+        clarity: "VS2",
+        color: "F",
+        cut: "Round",
+      },
+    ],
+    tagSlugs: ["sapphire", "diamond", "halo", "platinum", "ring", "engagement"],
+  },
+  {
+    sku: "N-003-AU",
+    title: "Pearl Pendant Necklace in 18k Gold",
+    category: "necklace",
+    status: "IN_STOCK",
+    priceCents: 349000,
+    currency: "BRL",
+    qrSlug: "n-003-au",
+    isPublic: true,
+    supplierName: "PearlWorks",
+    costCents: 220000,
+    images: [
+      {
+        url: "https://example.com/images/N-003-AU-1.jpg",
+        alt: "Pendant",
+        isPrimary: true,
+      },
+    ],
+    gems: [{ type: "pearl", sizeMm: 8.5, shape: "round", notes: "Akoya" }],
+    tagSlugs: [
+      "pearl",
+      "gold",
+      "yellow-gold",
+      "necklace",
+      "pendant",
+      "minimal",
+    ],
+  },
+  {
+    sku: "E-004-AG",
+    title: "Sterling Silver Emerald Stud Earrings",
+    category: "earrings",
+    status: "IN_STOCK",
+    priceCents: 159000,
+    currency: "BRL",
+    isPublic: true,
+    supplierName: "GreenGems",
+    costCents: 90000,
+    images: [
+      {
+        url: "https://example.com/images/E-004-AG-1.jpg",
+        alt: "Studs",
+        isPrimary: true,
+      },
+    ],
+    gems: [{ type: "emerald", carat: 0.6, color: "Vivid Green", cut: "Round" }],
+    tagSlugs: ["emerald", "silver", "earrings", "minimal"],
+  },
+  {
+    sku: "B-005-AU",
+    title: "Rose Gold Diamond Tennis Bracelet",
+    category: "bracelet",
+    status: "IN_STOCK",
+    priceCents: 1299000,
+    currency: "BRL",
+    barcodeType: "EAN13",
+    barcodeData: "7891234567890",
+    isPublic: true,
+    supplierName: "Luna Jewelers",
+    costCents: 800000,
+    images: [
+      {
+        url: "https://example.com/images/B-005-AU-1.jpg",
+        alt: "Tennis bracelet",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      { type: "diamond", carat: 2.0, clarity: "VS2", color: "H", cut: "Round" },
+    ],
+    tagSlugs: ["diamond", "rose-gold", "gold", "bracelet", "statement"],
+  },
+  {
+    sku: "R-006-AU-5",
+    title: "Vintage Ruby Cluster Ring (Size 5)",
+    category: "ring",
+    status: "IN_STOCK",
+    priceCents: 449000,
+    currency: "BRL",
+    isPublic: false,
+    privateNotes: "Needs resizing for client MAR-23",
+    supplierName: "OldTown Antiques",
+    costCents: 260000,
+    images: [
+      {
+        url: "https://example.com/images/R-006-AU-5-1.jpg",
+        alt: "Cluster ring",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      { type: "ruby", carat: 0.9, color: "Pigeon Blood", cut: "Oval" },
+      {
+        type: "diamond",
+        carat: 0.15,
+        clarity: "SI1",
+        color: "G",
+        cut: "Round",
+      },
+    ],
+    tagSlugs: ["ruby", "diamond", "vintage", "ring"],
+  },
+  {
+    sku: "P-007-PT",
+    title: "Platinum Minimal Bar Pendant",
+    category: "pendant",
+    status: "IN_STOCK",
+    priceCents: 199000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/P-007-PT-1.jpg",
+        alt: "Bar pendant",
+        isPrimary: true,
+      },
+    ],
+    gems: [],
+    tagSlugs: ["platinum", "pendant", "minimal"],
+  },
+  {
+    sku: "N-008-AUWG",
+    title: "White Gold Diamond Halo Necklace",
+    category: "necklace",
+    status: "IN_STOCK",
+    priceCents: 759000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/N-008-AUWG-1.jpg",
+        alt: "Halo necklace",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      { type: "diamond", carat: 0.8, clarity: "VS1", color: "G", cut: "Round" },
+    ],
+    tagSlugs: ["diamond", "white-gold", "gold", "necklace", "halo"],
+  },
+  {
+    sku: "E-009-AU",
+    title: "Pearl Drop Earrings in Yellow Gold",
+    category: "earrings",
+    status: "IN_STOCK",
+    priceCents: 279000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/E-009-AU-1.jpg",
+        alt: "Pearl drop earrings",
+        isPrimary: true,
+      },
+    ],
+    gems: [{ type: "pearl", sizeMm: 9.0, shape: "drop", notes: "Freshwater" }],
+    tagSlugs: ["pearl", "gold", "yellow-gold", "earrings"],
+  },
+  {
+    sku: "R-010-AG-8",
+    title: "Silver Emerald Three-Stone Ring (Size 8)",
+    category: "ring",
+    status: "IN_STOCK",
+    priceCents: 229000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/R-010-AG-8-1.jpg",
+        alt: "Three-stone ring",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      { type: "emerald", carat: 0.7, color: "Green", cut: "Oval" },
+      { type: "diamond", carat: 0.2, clarity: "SI1", color: "H", cut: "Round" },
+    ],
+    tagSlugs: ["emerald", "diamond", "silver", "ring"],
+  },
+  {
+    sku: "B-011-AG",
+    title: "Minimal Silver Bangle",
+    category: "bracelet",
+    status: "IN_STOCK",
+    priceCents: 49000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/B-011-AG-1.jpg",
+        alt: "Silver bangle",
+        isPrimary: true,
+      },
+    ],
+    gems: [],
+    tagSlugs: ["silver", "bracelet", "minimal"],
+  },
+  {
+    sku: "N-012-PT",
+    title: "Platinum Pearl Strand Necklace",
+    category: "necklace",
+    status: "IN_STOCK",
+    priceCents: 999000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/N-012-PT-1.jpg",
+        alt: "Pearl strand",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      {
+        type: "pearl",
+        sizeMm: 7.5,
+        shape: "round",
+        notes: "Akoya, 18-inch length",
+      },
+    ],
+    tagSlugs: ["pearl", "platinum", "necklace", "statement"],
+  },
+  {
+    sku: "R-013-AU-6",
+    title: "Rose Gold Morganite Halo Ring (Size 6)",
+    category: "ring",
+    status: "IN_STOCK",
+    priceCents: 389000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/R-013-AU-6-1.jpg",
+        alt: "Morganite halo ring",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      { type: "diamond", carat: 0.2, clarity: "SI1", color: "G", cut: "Round" },
+    ],
+    tagSlugs: ["rose-gold", "gold", "ring", "halo"],
+  },
+  {
+    sku: "P-014-AUWG",
+    title: "White Gold Sapphire Teardrop Pendant",
+    category: "pendant",
+    status: "IN_STOCK",
+    priceCents: 299000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/P-014-AUWG-1.jpg",
+        alt: "Sapphire teardrop pendant",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      {
+        type: "sapphire",
+        carat: 0.9,
+        color: "Blue",
+        cut: "Pear",
+        sizeMm: 8.0,
+        shape: "pear",
+      },
+    ],
+    tagSlugs: ["sapphire", "white-gold", "gold", "pendant"],
+  },
+  {
+    sku: "E-015-PT",
+    title: "Platinum Diamond Huggie Earrings",
+    category: "earrings",
+    status: "IN_STOCK",
+    priceCents: 649000,
+    currency: "BRL",
+    isPublic: true,
+    images: [
+      {
+        url: "https://example.com/images/E-015-PT-1.jpg",
+        alt: "Diamond huggies",
+        isPrimary: true,
+      },
+    ],
+    gems: [
+      { type: "diamond", carat: 0.6, clarity: "VS1", color: "G", cut: "Round" },
+    ],
+    tagSlugs: ["diamond", "platinum", "earrings"],
+  },
+];

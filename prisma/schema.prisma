@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ItemStatus {
+  DRAFT
+  IN_STOCK
+  RESERVED
+  SOLD
+  ARCHIVED
+}
+
+enum BarcodeSymbology {
+  CODE128
+  EAN13
+  QR
+}
+
+model Item {
+  id            Int             @id @default(autoincrement())
+  sku           String          @unique
+  title         String
+  /// Lowercased version of title for fast case-insensitive search
+  titleLc       String          @default("")
+  /// Free-text category to keep things simple (e.g., "ring", "necklace")
+  category      String?
+  status        ItemStatus      @default(IN_STOCK)
+
+  /// Price in cents to avoid floating point issues (e.g., 299000 = R$2,990.00)
+  priceCents    Int
+  /// ISO 4217 currency code (e.g., "BRL", "CAD", "USD")
+  currency      String          @db.VarChar(3)
+
+  /// Optional QR-friendly slug for public page links (unique when present)
+  qrSlug        String?         @unique
+  /// Optional barcode metadata (not required by the app)
+  barcodeType   BarcodeSymbology?
+  /// The encoded value for barcode/QR (often the SKU, but can differ)
+  barcodeData   String?
+
+  /// Public/Private split for clarity
+  isPublic      Boolean         @default(false)
+  publicAt      DateTime?
+  publicNotes   String?
+  privateNotes  String?
+
+  /// Lightweight supplier & cost fields for imports
+  supplierName  String?
+  supplierRef   String?
+  costCents     Int?
+  acquiredAt    DateTime?
+
+  /// Optional sizing/weight helpers
+  weightGrams   Float?
+  size          String?
+
+  images        Image[]
+  gems          Gem[]
+  tags          ItemTag[]
+  collections   CollectionItem[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([titleLc])
+  @@index([status, category])
+  @@index([priceCents])
+}
+
+model Image {
+  id         Int      @id @default(autoincrement())
+  itemId     Int
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  url        String
+  alt        String?
+  isPrimary  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  isPublic   Boolean  @default(true)
+
+  createdAt  DateTime @default(now())
+
+  @@index([itemId, sortOrder])
+}
+
+model Gem {
+  id            Int      @id @default(autoincrement())
+  itemId        Int
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  /// e.g., "diamond", "sapphire", "emerald", "pearl"
+  type          String
+  carat         Float?
+  clarity       String?
+  color         String?
+  cut           String?
+  /// For pearls or calibrated stones
+  sizeMm        Float?
+  shape         String?
+  labCertificate String?
+  notes         String?
+
+  @@index([itemId, type])
+}
+
+model Tag {
+  id    Int       @id @default(autoincrement())
+  name  String    @unique
+  slug  String    @unique
+
+  items ItemTag[]
+}
+
+model ItemTag {
+  itemId Int
+  tagId  Int
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+  @@index([tagId])
+}
+
+model Collection {
+  id          Int               @id @default(autoincrement())
+  /// Admin-facing name (e.g., "Pearl rings under R$3,000")
+  name        String
+  slug        String            @unique
+  description String?
+
+  /// Shareable quick lists
+  public      Boolean           @default(false)
+  publicSlug  String?           @unique
+
+  /// Dynamic = saved filters (JSON); Static = curated items via join table
+  isDynamic   Boolean           @default(true)
+  filters     Json?
+
+  items       CollectionItem[]
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model CollectionItem {
+  collectionId Int
+  itemId       Int
+  sortOrder    Int       @default(0)
+  addedAt      DateTime  @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  item       Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, itemId])
+  @@index([itemId])
+  @@index([collectionId, sortOrder])
+}
