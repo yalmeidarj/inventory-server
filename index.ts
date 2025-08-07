@@ -7,6 +7,13 @@ import morgan from "morgan";
 
 /* ROUTE IMPORTS */
 import dashboardRoutes from "./src/routes/dashboardRoutes";
+import metaRoutes from "./src/routes/metaRoutes";
+import itemRoutes from "./src/routes/itemRoutes";
+import tagRoutes from "./src/routes/tagRoutes";
+import collectionRoutes from "./src/routes/collectionRoutes";
+import publicRoutes from "./src/routes/publicRoutes";
+import metricsRoutes from "./src/routes/metricsRoutes";
+import barcodeRoutes from "./src/routes/barcodeRoutes";
 
 
 /* CONFIGURATIONS */
@@ -24,7 +31,14 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("Welcome to the Inventory Management API");
 });
-app.use("/popular-products", dashboardRoutes); // http://localhost:8000/dashboard
+app.use("/popular-products", dashboardRoutes); // legacy
+app.use("/meta", metaRoutes);
+app.use("/items", itemRoutes);
+app.use("/tags", tagRoutes);
+app.use("/collections", collectionRoutes);
+app.use("/public", publicRoutes);
+app.use("/metrics", metricsRoutes);
+app.use("/barcode", barcodeRoutes);
 
 /* SERVER */
 const port = Number(process.env.PORT) || 3001;
