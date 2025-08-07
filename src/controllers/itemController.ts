@@ -135,6 +135,7 @@ export const getItemBySku = async (req: Request, res: Response): Promise<void> =
 };
 
 export const createItem = async (req: Request, res: Response): Promise<void> => {
+  // Params: 
   try {
     const data = req.body;
     const item = await prisma.item.create({
