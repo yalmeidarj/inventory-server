@@ -13,6 +13,20 @@ import {
 
 const router = Router();
 
+/**
+ * @swagger
+ * /items:
+ *   get:
+ *     summary: Search items
+ *     responses:
+ *       200:
+ *         description: A list of items
+ *   post:
+ *     summary: Create a new item
+ *     responses:
+ *       201:
+ *         description: Created item
+ */
 router.get("/", searchItems);
 router.get("/sku/:sku", getItemBySku);
 router.post("/import/csv", importItemsCsv);
