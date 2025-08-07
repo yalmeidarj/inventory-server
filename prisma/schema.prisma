@@ -8,6 +8,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------
+//  ENUMS
+// ---------------------------------------------------------------------
 enum ItemStatus {
   DRAFT
   IN_STOCK
@@ -22,91 +25,218 @@ enum BarcodeSymbology {
   QR
 }
 
-model Item {
-  id            Int             @id @default(autoincrement())
-  sku           String          @unique
-  title         String
-  /// Lowercased version of title for fast case-insensitive search
-  titleLc       String          @default("")
-  /// Free-text category to keep things simple (e.g., "ring", "necklace")
-  category      String?
-  status        ItemStatus      @default(IN_STOCK)
+enum ItemType {
+  RING
+  BRACELET
+  NECKLACE
+  EARRING
+  PENDANT
+  OTHER          // catch-all; extend as required
+}
 
-  /// Price in cents to avoid floating point issues (e.g., 299000 = R$2,990.00)
+enum ItemSubType {
+  // _3STONE
+  COCKTAIL
+  DINNER
+  ENGAGEMENT
+  HALO
+  BAND
+  BAND_MENS
+  MENS
+}
+
+enum Availability {
+  ANY
+  MEMO              // items out on memo
+  PARTNER           // partnership stock
+  OWN_STOCK         // owned inventory
+}
+
+enum Source {
+  MFG               // manufacturer
+  FINISHED          // finished goods purchase
+  PARTNER
+  PURCHASE_AGREEMENT
+}
+
+enum MetalType {
+  PT                // platinum
+  GOLD10K
+  GOLD14K
+  GOLD18K
+  RG                // rose gold
+  YG                // yellow gold
+  WG                // white gold
+  SS                // sterling silver
+  OTHER
+}
+
+enum GemRole {
+  MAIN
+  ACCENT
+  SIDE
+}
+
+enum GemShape {
+  ROUND
+  PRINCESS
+  CUSHION
+  ASSCHER
+  OVAL
+  PEAR
+  MARQUISE
+  EMERALDCUT
+  HEART
+}
+
+enum GemCutGrade {
+  IDEAL
+  EXCELLENT
+  VERY_GOOD
+  GOOD
+  FAIR
+  POOR
+}
+
+enum GemColorScale {
+  D
+  E
+  F
+  G
+  H
+  I
+  J
+  K
+  L
+  M
+  N
+  OP
+  QR
+  S
+  T
+  U
+  VWX
+  YZ
+}
+
+enum GemClarityGrade {
+  FL
+  IF
+  VVS1
+  VVS2
+  VS1
+  VS2
+  SI1
+  SI2
+  I1
+  I2
+  I3
+}
+
+// ---------------------------------------------------------------------
+//  MODELS
+// ---------------------------------------------------------------------
+model Item {
+  id            Int            @id @default(autoincrement())
+  sku           String         @unique
+  title         String
+  titleLc       String         @default("") @db.Text
+
+  // --- Classification & attributes
+  itemType      ItemType?
+  itemSubType   ItemSubType?
+  metal         MetalType?
+  brand         String?
+  style         String?
+
+  // --- Operational
+  status        ItemStatus      @default(IN_STOCK)
+  availability  Availability    @default(ANY)
+  source        Source?
+  location      String?
+  heldStatus    String?
+  memoInDays    Int?
+
+  // --- Pricing & quantity
+  qty           Int             @default(1)
   priceCents    Int
-  /// ISO 4217 currency code (e.g., "BRL", "CAD", "USD")
   currency      String          @db.VarChar(3)
 
-  /// Optional QR-friendly slug for public page links (unique when present)
+  // --- Barcode / QR
   qrSlug        String?         @unique
-  /// Optional barcode metadata (not required by the app)
   barcodeType   BarcodeSymbology?
-  /// The encoded value for barcode/QR (often the SKU, but can differ)
   barcodeData   String?
 
-  /// Public/Private split for clarity
+  // --- Notes & supplier info
   isPublic      Boolean         @default(false)
   publicAt      DateTime?
   publicNotes   String?
   privateNotes  String?
-
-  /// Lightweight supplier & cost fields for imports
   supplierName  String?
   supplierRef   String?
   costCents     Int?
   acquiredAt    DateTime?
 
-  /// Optional sizing/weight helpers
+  // --- Physical helpers
   weightGrams   Float?
   size          String?
 
+  // --- Relations
   images        Image[]
   gems          Gem[]
   tags          ItemTag[]
   collections   CollectionItem[]
 
+  // --- Timestamps & indexes
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
   @@index([titleLc])
-  @@index([status, category])
+  @@index([status, itemType, itemSubType])
   @@index([priceCents])
-}
-
-model Image {
-  id         Int      @id @default(autoincrement())
-  itemId     Int
-  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-
-  url        String
-  alt        String?
-  isPrimary  Boolean  @default(false)
-  sortOrder  Int      @default(0)
-  isPublic   Boolean  @default(true)
-
-  createdAt  DateTime @default(now())
-
-  @@index([itemId, sortOrder])
+  @@index([availability, memoInDays])
 }
 
 model Gem {
-  id            Int      @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
   itemId        Int
-  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item          Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
-  /// e.g., "diamond", "sapphire", "emerald", "pearl"
+  role          GemRole         @default(ACCENT)
   type          String
-  carat         Float?
-  clarity       String?
-  color         String?
-  cut           String?
-  /// For pearls or calibrated stones
+  shape         GemShape?
+  weightCt      Float?
+  color         GemColorScale?
+  clarity       GemClarityGrade?
+  cut           GemCutGrade?
   sizeMm        Float?
-  shape         String?
   labCertificate String?
   notes         String?
 
-  @@index([itemId, type])
+  // Aggregate helpers (optional)
+  diaQty        Int?
+  diaWeightCt   Float?
+  gemQty        Int?
+  gemWeightCt   Float?
+
+  @@index([itemId, role, type])
+  @@index([shape, color, clarity, cut])
+}
+
+model Image {
+  id         Int       @id @default(autoincrement())
+  itemId     Int
+  item       Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  url        String
+  alt        String?
+  isPrimary  Boolean   @default(false)
+  sortOrder  Int       @default(0)
+  isPublic   Boolean   @default(true)
+
+  createdAt  DateTime  @default(now())
+
+  @@index([itemId, sortOrder])
 }
 
 model Tag {
@@ -130,16 +260,13 @@ model ItemTag {
 
 model Collection {
   id          Int               @id @default(autoincrement())
-  /// Admin-facing name (e.g., "Pearl rings under R$3,000")
   name        String
   slug        String            @unique
   description String?
 
-  /// Shareable quick lists
   public      Boolean           @default(false)
   publicSlug  String?           @unique
 
-  /// Dynamic = saved filters (JSON); Static = curated items via join table
   isDynamic   Boolean           @default(true)
   filters     Json?
 

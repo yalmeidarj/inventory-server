@@ -1,17 +1,145 @@
-// prisma/seed.ts
-// Seeds the database for the jewelry inventory schema (QR/Barcode-ready, not required).
-// Uses Prisma v5 enum typing via Prisma.$Enums.*
-
-import { PrismaClient } from "@prisma/client";
-import { tags } from "./seedData/tags";
-import { items } from "./seedData/items";
-import { dynamicCollections, staticCollections } from "./seedData/collections";
-import { BarcodeSymbology, ItemStatus } from "../generated/prisma/client";
+import {
+  PrismaClient,
+  ItemType,
+  ItemSubType,
+  MetalType,
+  Availability,
+  Source,
+  ItemStatus,
+  BarcodeSymbology,
+  GemRole,
+  GemShape,
+  GemColorScale,
+  GemClarityGrade,
+  GemCutGrade,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+/* ----------------------------------------------------
+ *  DATASETS (mini)
+ * -------------------------------------------------- */
+const tags = [
+  { name: "diamond", slug: "diamond" },
+  { name: "engagement", slug: "engagement" },
+  { name: "bracelet", slug: "bracelet" },
+];
+
+type SeedGem = {
+  role?: GemRole;
+  type: string;
+  shape?: GemShape | null;
+  weightCt?: number | null;
+  color?: GemColorScale | null;
+  clarity?: GemClarityGrade | null;
+  cut?: GemCutGrade | null;
+};
+
+type SeedImage = { url: string; alt?: string; isPrimary?: boolean };
+
+type SeedItem = {
+  sku: string;
+  title: string;
+  itemType: ItemType;
+  itemSubType?: ItemSubType | null;
+  metal?: MetalType | null;
+  availability?: Availability | null;
+  source?: Source | null;
+  priceCents: number;
+  currency: string;
+  status?: ItemStatus;
+  qty?: number;
+  qrSlug?: string | null;
+  barcodeType?: BarcodeSymbology | null;
+  barcodeData?: string | null;
+  tagSlugs?: string[];
+  images?: SeedImage[];
+  gems?: SeedGem[];
+};
+
+const items: SeedItem[] = [
+  {
+    sku: "R-001-18K",
+    title: "18K Yellow-Gold Diamond Engagement Ring",
+    itemType: ItemType.RING,
+    itemSubType: ItemSubType.ENGAGEMENT,
+    metal: MetalType.YG,
+    availability: Availability.OWN_STOCK,
+    source: Source.MFG,
+    priceCents: 516_606,
+    currency: "BRL",
+    status: ItemStatus.IN_STOCK,
+    tagSlugs: ["diamond", "engagement"],
+    images: [{ url: "https://picsum.photos/seed/ring/600" }],
+    gems: [
+      {
+        role: GemRole.MAIN,
+        type: "Diamond",
+        shape: GemShape.ROUND,
+        weightCt: 1.2,
+        color: GemColorScale.G,
+        clarity: GemClarityGrade.SI1,
+        cut: GemCutGrade.EXCELLENT,
+      },
+    ],
+  },
+  {
+    sku: "B-005-AU",
+    title: "Rose-Gold Diamond Tennis Bracelet",
+    itemType: ItemType.BRACELET,
+    metal: MetalType.RG,
+    availability: Availability.OWN_STOCK,
+    source: Source.FINISHED,
+    priceCents: 1_299_000,
+    currency: "BRL",
+    status: ItemStatus.IN_STOCK,
+    tagSlugs: ["bracelet", "diamond"],
+    qrSlug: "rose-gold-tennis",
+    barcodeType: BarcodeSymbology.EAN13,
+    barcodeData: "7891234567890",
+    images: [{ url: "https://picsum.photos/seed/bracelet/600" }],
+    gems: [
+      {
+        role: GemRole.MAIN,
+        type: "Diamond",
+        shape: GemShape.ROUND,
+        weightCt: 2.5,
+        color: GemColorScale.F,
+        clarity: GemClarityGrade.VS2,
+        cut: GemCutGrade.VERY_GOOD,
+      },
+    ],
+  },
+];
+
+const dynamicCollections = [
+  {
+    name: "Diamond Rings Under R$10k",
+    slug: "rings-under-10k",
+    description: "All diamond engagement rings below ten thousand reais",
+    public: true,
+    publicSlug: "rings-under-10k",
+    filters: { itemType: "RING", priceCents_lt: 1_000_000 },
+  },
+];
+
+const staticCollections = [
+  {
+    name: "Featured",
+    slug: "featured",
+    description: "Homepage carousel",
+    public: true,
+    publicSlug: "featured",
+    itemSkus: ["R-001-18K", "B-005-AU"],
+  },
+];
+
+/* ----------------------------------------------------
+ *  HELPERS
+ * -------------------------------------------------- */
+const lc = (s: string) => s.normalize("NFKD").toLowerCase();
+
 async function clearAll() {
-  // Delete in dependency order
   await prisma.collectionItem.deleteMany();
   await prisma.collection.deleteMany();
   await prisma.itemTag.deleteMany();
@@ -21,158 +149,131 @@ async function clearAll() {
   await prisma.item.deleteMany();
 }
 
-function lc(s: string) {
-  return s.normalize("NFKD").toLowerCase();
-}
-
 async function seedTags() {
-  // Upsert canonical tags
-  const tagRecords = [];
+  const recs = [];
   for (const t of tags) {
     const rec = await prisma.tag.upsert({
       where: { slug: t.slug },
       update: { name: t.name },
       create: { name: t.name, slug: t.slug },
     });
-    tagRecords.push(rec);
+    recs.push(rec);
   }
-  const bySlug = new Map(tagRecords.map((t) => [t.slug, t]));
-  return { tagRecords, bySlug };
+  return new Map(recs.map((r) => [r.slug, r]));
 }
 
-async function seedItems(bySlug: Map<string, any>) {
-  const itemRecords: any[] = [];
-
+async function seedItems(tagMap: Map<string, any>) {
+  const recs = [];
   for (const src of items) {
-    // Create item with nested images & gems
-    const created = await prisma.item.create({
+    const item = await prisma.item.create({
       data: {
         sku: src.sku,
         title: src.title,
         titleLc: lc(src.title),
-        category: src.category ?? null,
-        status: src.status as ItemStatus,
+        itemType: src.itemType,
+        itemSubType: src.itemSubType ?? null,
+        metal: src.metal ?? null,
+        availability: src.availability ?? Availability.ANY,
+        source: src.source ?? null,
+        status: src.status ?? ItemStatus.IN_STOCK,
+        qty: src.qty ?? 1,
         priceCents: src.priceCents,
         currency: src.currency,
         qrSlug: src.qrSlug ?? null,
-        barcodeType: (src.barcodeType ??
-          null) as BarcodeSymbology | null,
+        barcodeType: src.barcodeType ?? null,
         barcodeData: src.barcodeData ?? null,
-        isPublic: src.isPublic ?? false,
-        publicAt: (src.publicAt as any) ?? null,
-        publicNotes: src.publicNotes ?? null,
-        privateNotes: src.privateNotes ?? null,
-        supplierName: src.supplierName ?? null,
-        supplierRef: src.supplierRef ?? null,
-        costCents: src.costCents ?? null,
-        acquiredAt: (src.acquiredAt as any) ?? null,
-        weightGrams: src.weightGrams ?? null,
-        size: src.size ?? null,
         images: {
           create: (src.images ?? []).map((im, idx) => ({
             url: im.url,
             alt: im.alt ?? null,
             isPrimary: im.isPrimary ?? idx === 0,
-            sortOrder: im.sortOrder ?? idx,
-            isPublic: im.isPublic ?? true,
+            sortOrder: idx,
           })),
         },
         gems: {
           create: (src.gems ?? []).map((g) => ({
+            role: g.role ?? GemRole.ACCENT,
             type: g.type,
-            carat: g.carat ?? null,
-            clarity: g.clarity ?? null,
-            color: g.color ?? null,
-            cut: g.cut ?? null,
-            sizeMm: g.sizeMm ?? null,
             shape: g.shape ?? null,
-            labCertificate: g.labCertificate ?? null,
-            notes: g.notes ?? null,
+            weightCt: g.weightCt ?? null,
+            color: g.color ?? null,
+            clarity: g.clarity ?? null,
+            cut: g.cut ?? null,
           })),
         },
       },
     });
 
-    // Create item-tag rows
-    const tagSlugs: string[] = src.tagSlugs ?? [];
-    for (const slug of tagSlugs) {
-      const tag = bySlug.get(slug);
+    for (const slug of src.tagSlugs ?? []) {
+      const tag = tagMap.get(slug);
       if (tag) {
         await prisma.itemTag.create({
-          data: {
-            itemId: created.id,
-            tagId: tag.id,
-          },
+          data: { itemId: item.id, tagId: tag.id },
         });
       }
     }
-
-    itemRecords.push(created);
+    recs.push(item);
   }
 
-  const bySku = new Map(itemRecords.map((it) => [it.sku, it]));
-  return { itemRecords, bySku };
+  return new Map(recs.map((i) => [i.sku, i]));
 }
 
-async function seedCollections(bySku: Map<string, any>) {
-  // Dynamic collections
+async function seedCollections(itemMap: Map<string, any>) {
+  // dynamic
   for (const dc of dynamicCollections) {
     await prisma.collection.create({
       data: {
         name: dc.name,
         slug: dc.slug,
-        description: dc.description ?? null,
-        public: dc.public ?? false,
-        publicSlug: dc.publicSlug ?? null,
+        description: dc.description,
+        public: dc.public,
+        publicSlug: dc.publicSlug,
         isDynamic: true,
         filters: dc.filters as any,
       },
     });
   }
 
-  // Static collections with explicit item order
+  // static
   for (const sc of staticCollections) {
-    const created = await prisma.collection.create({
+    const coll = await prisma.collection.create({
       data: {
         name: sc.name,
         slug: sc.slug,
-        description: sc.description ?? null,
-        public: sc.public ?? false,
-        publicSlug: sc.publicSlug ?? null,
+        description: sc.description,
+        public: sc.public,
+        publicSlug: sc.publicSlug,
         isDynamic: false,
       },
     });
 
-    for (let i = 0; i < sc.itemSkus.length; i++) {
-      const sku = sc.itemSkus[i];
-      if (!sku) continue;
-      const item = bySku.get(sku);
-      if (!item) continue;
+    sc.itemSkus.forEach(async (sku, idx) => {
+      const item = itemMap.get(sku);
+      if (!item) return;
       await prisma.collectionItem.create({
-        data: {
-          collectionId: created.id,
-          itemId: item.id,
-          sortOrder: i,
-        },
+        data: { collectionId: coll.id, itemId: item.id, sortOrder: idx },
       });
-    }
+    });
   }
 }
 
+/* ----------------------------------------------------
+ *  MAIN
+ * -------------------------------------------------- */
 async function main() {
-  console.log("Clearing database...");
+  console.log("🧹 Clearing…");
   await clearAll();
 
-  console.log("Seeding tags...");
-  const { bySlug } = await seedTags();
+  console.log("🏷️  Tags…");
+  const tagMap = await seedTags();
 
-  console.log("Seeding items...");
-  const { bySku } = await seedItems(bySlug);
+  console.log("💍 Items…");
+  const itemMap = await seedItems(tagMap);
 
-  console.log("Seeding collections...");
-  await seedCollections(bySku);
+  console.log("📚 Collections…");
+  await seedCollections(itemMap);
 
-  console.log("✅ Seed completed.");
+  console.log("✅ Seed done!");
 }
 
 main()
@@ -180,6 +281,4 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());

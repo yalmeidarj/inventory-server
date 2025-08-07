@@ -24,7 +24,7 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("Welcome to the Inventory Management API");
 });
-app.use("/dashboard", dashboardRoutes); // http://localhost:8000/dashboard
+app.use("/popular-products", dashboardRoutes); // http://localhost:8000/dashboard
 
 /* SERVER */
 const port = Number(process.env.PORT) || 3001;
